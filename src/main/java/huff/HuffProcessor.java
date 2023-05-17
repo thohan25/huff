@@ -84,11 +84,11 @@ public class HuffProcessor implements Processor {
      */
     private HuffNode makeTreeFromCounts(int[] array) {
         PriorityQueue<HuffNode> nodes = new PriorityQueue<>();
-        nodes.add(new HuffNode(257, 1));
+        nodes.add(new HuffNode(256, 1));
         
         for (int i = 0; i < 256; i++) {
             if (array[i]>0) {
-                nodes.add(new HuffNode(i+1, array[i]));
+                nodes.add(new HuffNode(i, array[i]));
             }            
         }
 
@@ -129,10 +129,31 @@ public class HuffProcessor implements Processor {
      * current encoding is added to the array.*/
 
     private String[] makeCodingsFromTree(HuffNode root) {
-        // TODO: Step 3! You will need to create a helper recursive method
-        return new String[257];
+        String codings[] = new String[257];
+    
+        makeCodingsFromTree(root, codings, "");
+
+        return codings;
     }
 
+    private void makeCodingsFromTree(HuffNode hn, String[] bits, String encoding) {
+        if (hn == null) {
+            return;
+        }
+
+        if (hn.value()!=-1) {
+            for (int i = 0; i < bits.length; i++) {
+                if (bits[i]==null) {
+                    bits[i] = encoding + Integer.toBinaryString(hn.value());
+                    break;
+                }
+            }
+        } else {
+            makeCodingsFromTree(hn.left(), bits, encoding+"0");
+            makeCodingsFromTree(hn.right(), bits, encoding+"1");
+        }
+    }
+ 
 
     /** Debugging method.
      * Prints the codings of the characters in the array [0-256].
