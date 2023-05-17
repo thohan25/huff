@@ -1,5 +1,6 @@
 package huff;
 
+import java.util.ArrayList;
 import java.util.PriorityQueue;
 
 /**
@@ -82,8 +83,23 @@ public class HuffProcessor implements Processor {
      * PSEUDO_EOF and include it in the priority queue (and tree) as well.
      */
     private HuffNode makeTreeFromCounts(int[] array) {
-        // TODO: Step 2
-        return new HuffNode(-1,-1);
+        PriorityQueue<HuffNode> nodes = new PriorityQueue<>();
+        nodes.add(new HuffNode(257, 1));
+        
+        for (int i = 0; i < 256; i++) {
+            if (array[i]>0) {
+                nodes.add(new HuffNode(i+1, array[i]));
+            }            
+        }
+
+        while (nodes.size()>1) {
+            HuffNode left = nodes.poll();
+            HuffNode right = nodes.poll();
+
+            nodes.add(new HuffNode(-1, left.weight()+right.weight(), left, right));
+        }
+
+        return nodes.peek();
     }
 
     /** Debugging method.
