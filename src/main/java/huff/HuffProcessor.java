@@ -1,6 +1,5 @@
 package huff;
 
-import java.util.ArrayList;
 import java.util.PriorityQueue;
 
 /**
@@ -61,7 +60,7 @@ public class HuffProcessor implements Processor {
         int arr[] = new int[256];
         int temp = in.read();
         while (temp != -1) {
-            arr[temp - 1]++;
+            arr[temp]++;
             temp = in.read();
         }
         return arr;
@@ -88,9 +87,9 @@ public class HuffProcessor implements Processor {
      */
     private HuffNode makeTreeFromCounts(int[] array) {
         PriorityQueue<HuffNode> nodes = new PriorityQueue<>();
-        nodes.add(new HuffNode(256, 1));
+        nodes.add(new HuffNode(PSEUDO_EOF, 1));
 
-        for (int i = 0; i < 256; i++) {
+        for (int i = 0; i < array.length; i++) {
             if (array[i] > 0) {
                 nodes.add(new HuffNode(i, array[i]));
             }
@@ -145,18 +144,12 @@ public class HuffProcessor implements Processor {
     }
 
     private void makeCodingsFromTree(HuffNode hn, String[] bits, String encoding) {
-        if (hn == null) {
+        if (hn == null)
             return;
-        }
 
-        if (hn.value() != -1) {
-            for (int i = 0; i < bits.length; i++) {
-                if (bits[i] == null) {
-                    bits[i] = encoding + Integer.toBinaryString(hn.value());
-                    break;
-                }
-            }
-        } else {
+        if (hn.isLeaf())
+            bits[hn.value()] = encoding;
+        else {
             makeCodingsFromTree(hn.left(), bits, encoding + "0");
             makeCodingsFromTree(hn.right(), bits, encoding + "1");
         }
@@ -185,7 +178,17 @@ public class HuffProcessor implements Processor {
      * the value stored in the leaf.
      */
     private void writeHeader(HuffNode n, BitOutputStream out) {
-        // TODO: Step 4
+        if (n == null) 
+            return;
+        
+        if (!n.isLeaf()) {
+            out.writeBits(1, 0);
+            writeHeader(n.left(), out);
+            writeHeader(n.right(), out);
+        } else {
+            out.writeBits(1, 1);
+            out.writeBits(9, n.value());
+        }
     }
 
     /** Write the body of the compressed file.  Read through the input stream 8 bits
@@ -234,7 +237,13 @@ public class HuffProcessor implements Processor {
      * set to -1.
      */
     HuffNode readHeader(BitInputStream in) {
-        // TODO: Step 6
+        int bit = in.readBits(1);
+        if (bit == 0) {
+            return new HuffNode(0, -1, readHeader(in), readHeader(in));
+        } else if (bit == 1) {
+            return new HuffNode(in.readBits(9), -1);
+        }
+
         return new HuffNode(-1, -1);
     }
 
@@ -247,7 +256,21 @@ public class HuffProcessor implements Processor {
      * (If the value of the leaf is PSEUDO_EOF, exit the function.)
      */
     private void readCompressedBits(HuffNode root, BitInputStream in, BitOutputStream out) {
-        // TODO: Step 7
+        int bit = in.readBits(1);
+        HuffNode newNode;
+        if (bit == 0) {
+            newNode = root.left();
+        } else {
+            newNode = root.right();
+        }
+
+        if (newNode.isLeaf()) {
+            if (newNode.value() != PSEUDO_EOF) {
+                out.writeBits(8, newNode.value());
+            }
+        } else {
+            readCompressedBits(newNode, in, out);
+        }
     }
 
 }
